@@ -24,7 +24,13 @@ import android.media.session.MediaController;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Bundle;
+import android.os.RemoteException;
 import android.support.annotation.NonNull;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 import com.example.android.uamp.MusicService;
 import com.example.android.uamp.R;
@@ -39,7 +45,7 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
 
     private static final String TAG = LogHelper.makeLogTag(BaseActivity.class);
 
-    private MediaBrowser mMediaBrowser;
+    private MediaBrowserCompat mMediaBrowser;
     private PlaybackControlsFragment mControlsFragment;
 
     @Override
@@ -58,7 +64,7 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
 
         // Connect a media browser just to get the media session token. There are other ways
         // this can be done, for example by sharing the session token directly.
-        mMediaBrowser = new MediaBrowser(this,
+        mMediaBrowser = new MediaBrowserCompat(this,
             new ComponentName(this, MusicService.class), mConnectionCallback, null);
     }
 
@@ -82,14 +88,14 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
     protected void onStop() {
         super.onStop();
         LogHelper.d(TAG, "Activity onStop");
-        if (getMediaController() != null) {
-            getMediaController().unregisterCallback(mMediaControllerCallback);
+        if (getSupportMediaController() != null) {
+            getSupportMediaController().unregisterCallback(mMediaControllerCallback);
         }
         mMediaBrowser.disconnect();
     }
 
     @Override
-    public MediaBrowser getMediaBrowser() {
+    public MediaBrowserCompat getMediaBrowser() {
         return mMediaBrowser;
     }
 
@@ -123,25 +129,31 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
      * @return true if the MediaSession's state requires playback controls to be visible.
      */
     protected boolean shouldShowControls() {
-        MediaController mediaController = getMediaController();
+        MediaControllerCompat mediaController = getSupportMediaController();
         if (mediaController == null ||
             mediaController.getMetadata() == null ||
             mediaController.getPlaybackState() == null) {
             return false;
         }
         switch (mediaController.getPlaybackState().getState()) {
-            case PlaybackState.STATE_ERROR:
-            case PlaybackState.STATE_NONE:
-            case PlaybackState.STATE_STOPPED:
+            case PlaybackStateCompat.STATE_ERROR:
+            case PlaybackStateCompat.STATE_NONE:
+            case PlaybackStateCompat.STATE_STOPPED:
                 return false;
             default:
                 return true;
         }
     }
 
-    private void connectToSession(MediaSession.Token token) {
-        MediaController mediaController = new MediaController(this, token);
-        setMediaController(mediaController);
+    private void connectToSession(MediaSessionCompat.Token token) {
+        MediaControllerCompat mediaController = null;
+        try {
+            mediaController = new MediaControllerCompat(this, token);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+            //TODO CATCH
+        }
+        setSupportMediaController(mediaController);
         mediaController.registerCallback(mMediaControllerCallback);
 
         if (shouldShowControls()) {
@@ -160,10 +172,10 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
     }
 
     // Callback that ensures that we are showing the controls
-    private final MediaController.Callback mMediaControllerCallback =
-        new MediaController.Callback() {
+    private final MediaControllerCompat.Callback mMediaControllerCallback =
+        new MediaControllerCompat.Callback() {
             @Override
-            public void onPlaybackStateChanged(@NonNull PlaybackState state) {
+            public void onPlaybackStateChanged(@NonNull PlaybackStateCompat state) {
                 if (shouldShowControls()) {
                     showPlaybackControls();
                 } else {
@@ -174,7 +186,7 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
             }
 
             @Override
-            public void onMetadataChanged(MediaMetadata metadata) {
+            public void onMetadataChanged(MediaMetadataCompat metadata) {
                 if (shouldShowControls()) {
                     showPlaybackControls();
                 } else {
@@ -185,8 +197,8 @@ public abstract class BaseActivity extends ActionBarCastActivity implements Medi
             }
         };
 
-    private final MediaBrowser.ConnectionCallback mConnectionCallback =
-        new MediaBrowser.ConnectionCallback() {
+    private final MediaBrowserCompat.ConnectionCallback mConnectionCallback =
+        new MediaBrowserCompat.ConnectionCallback() {
             @Override
             public void onConnected() {
                 LogHelper.d(TAG, "onConnected");

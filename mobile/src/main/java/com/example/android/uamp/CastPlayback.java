@@ -17,6 +17,8 @@ package com.example.android.uamp;
 
 import android.media.session.PlaybackState;
 import android.net.Uri;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.text.TextUtils;
 
 import com.example.android.uamp.model.MusicProvider;
@@ -35,7 +37,6 @@ import com.google.android.libraries.cast.companionlibrary.cast.exceptions.Transi
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import static android.media.session.MediaSession.QueueItem;
 
 /**
  * An implementation of Playback that talks to Cast.
@@ -119,7 +120,7 @@ public class CastPlayback implements Playback {
     }
 
     @Override
-    public void play(QueueItem item) {
+    public void play(MediaSessionCompat.QueueItem item) {
         try {
             loadMedia(item.getDescription().getMediaId(), true);
             mState = PlaybackState.STATE_BUFFERING;
@@ -216,7 +217,7 @@ public class CastPlayback implements Playback {
     private void loadMedia(String mediaId, boolean autoPlay) throws
             TransientNetworkDisconnectionException, NoConnectionException, JSONException {
         String musicId = MediaIDHelper.extractMusicIDFromMediaID(mediaId);
-        android.media.MediaMetadata track = mMusicProvider.getMusic(musicId);
+        MediaMetadataCompat track = mMusicProvider.getMusic(musicId);
         if (track == null) {
             throw new IllegalArgumentException("Invalid mediaId " + mediaId);
         }
@@ -238,7 +239,7 @@ public class CastPlayback implements Playback {
      * @param customData custom data specifies the local mediaId used by the player.
      * @return mediaInfo {@link com.google.android.gms.cast.MediaInfo}
      */
-    private static MediaInfo toCastMediaMetadata(android.media.MediaMetadata track,
+    private static MediaInfo toCastMediaMetadata(MediaMetadataCompat track,
                                                  JSONObject customData) {
         MediaMetadata mediaMetadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
         mediaMetadata.putString(MediaMetadata.KEY_TITLE,
